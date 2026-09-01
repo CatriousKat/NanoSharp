@@ -1,0 +1,25 @@
+NanoSharp v1.2.1
+
+Tools:
+ns2exe -- Turns .ns scripts into .exe binaries
+
+Commands:
+print("message") -- Prints a message
+fs.read("file.txt") -- Reads the contents of a file
+fs.write("file.txt", "Content of file.txt") -- Writes a file
+fs.open("file.txt") -- Opens a file
+net.get("example.com") -- Performs a HTTP GET request
+net.post("example.com", "body") -- Performs a HTTP POST request
+net.put("example.com", "body") -- Performs a HTTP PUT request
+net.patch("example.com", "body") -- Performs a HTTP PATCH request
+net.delete("example.com") -- Performs a HTTP DELETE request
+net.download("example.com", "file.txt") -- Downloads a file
+gui.info("message") -- Displays a Information Message box
+gui.alert("message") -- Displays a Alert Message box
+gui.error("message") -- Displays a Error Message box
+gui.input("message") -- Displays a Prompt box
+gui.filepicker() -- Displays a file picker
+gui.filepicked() -- Returns the picked file
+x = 2 -- Sets a variable
+// comment -- Ignored comment
+if x == 2 {} -- A if statement
