@@ -1,4 +1,4 @@
-NanoSharp v1.2.1
+NanoSharp v1.0
 
 Tools:
 ns2exe -- Turns .ns scripts into .exe binaries
