@@ -2,6 +2,7 @@ NanoSharp v1.2.1
 
 Tools:
 ns2exe -- Turns .ns scripts into .exe binaries
+ns2app -- Turns .ns scripts into macOS apps
 
 Commands:
 print("message") -- Prints a message
