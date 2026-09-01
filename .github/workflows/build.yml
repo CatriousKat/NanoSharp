@@ -1,4 +1,4 @@
-- name: Build
+- name: Build Binary
       run: |
         go build -o nanosharp main.go
         ls -la
@@ -6,5 +6,5 @@
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: compiled-binary
+        name: nanosharp-binary
         path: ./nanosharp
