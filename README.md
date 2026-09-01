@@ -1,3 +1,3 @@
 # NanoSharp
-A programming language built in Golang.
-<img src="icon.png" width="400" height="auto">
+A programming language built in Golang. <br>
+<img src="icon.png" width="150" height="auto">
