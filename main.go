@@ -1,3 +1,5 @@
+//go:build windows
+
 package main
 
 import (
@@ -186,6 +188,18 @@ func (it *Interpreter) evalExpr(expr string, env *Environment) any {
 		return nil
 	}
 
+	if strings.HasPrefix(expr, "print(") && strings.HasSuffix(expr, ")") {
+		content := expr[6 : len(expr)-1]
+		args := parseArgs(content)
+		var evaluated []string
+		for _, arg := range args {
+			val := it.evalExpr(arg, env)
+			evaluated = append(evaluated, fmt.Sprintf("%v", val))
+		}
+		fmt.Println(strings.Join(evaluated, " "))
+		return nil
+	}
+
 	if strings.HasPrefix(expr, "net.get(") && strings.HasSuffix(expr, ")") {
 		urlArg := expr[8 : len(expr)-1]
 		url := strings.Trim(fmt.Sprintf("%v", it.evalExpr(urlArg, env)), "\"'")
@@ -202,7 +216,7 @@ func (it *Interpreter) evalExpr(expr string, env *Environment) any {
 		if len(args) >= 2 {
 			url := strings.Trim(fmt.Sprintf("%v", it.evalExpr(args[0], env)), "\"'")
 			path := strings.Trim(fmt.Sprintf("%v", it.evalExpr(args[1], env)), "\"'")
-			
+
 			resp, err := http.Get(url)
 			if err != nil {
 				return ""
