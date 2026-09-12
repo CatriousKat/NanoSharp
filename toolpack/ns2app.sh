@@ -1,41 +1,48 @@
 #!/bin/bash
+set -e
+
+# Usage: ./ns2app.sh <script.ns> [AppName] [BundleID]
+
+SCRIPT_PATH="$1"
+if [ -z "$SCRIPT_PATH" ] || [ ! -f "$SCRIPT_PATH" ]; then
+    echo "Error: Valid .ns script path required." >&2
+    echo "Usage: $0 <script.ns> [AppName] [BundleID]" >&2
+    exit 1
+fi
+
+BASENAME=$(basename "$SCRIPT_PATH" .ns)
+APP_NAME="${2:-$BASENAME}"
+
+SAFE_USER=$(whoami | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+SAFE_APP=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+DEFAULT_ID="com.$SAFE_USER.$SAFE_APP"
+
+BUNDLE_ID="${3:-$DEFAULT_ID}"
+TARGET_APP="$APP_NAME.app"
 
 NANO_APP="/Applications/NanoSharp.app"
-
 if [ ! -d "$NANO_APP" ]; then
-    osascript -e 'display dialog "Error: NanoSharp.app was not found in /Applications." buttons {"OK"} default button 1 with icon stop'
-    exit 1
+    echo "Warning: You need to put NanoSharp.app in /Applications." >&2
 fi
-
-NS_FILE=$(osascript -e 'POSIX path of (choose file with prompt "Select your .ns file:")' 2>/dev/null)
-if [ -z "$NS_FILE" ]; then
-    osascript -e 'display dialog "No file selected. Exiting." buttons {"OK"} default button 1 with icon caution'
-    exit 1
-fi
-
-BASENAME=$(basename "$NS_FILE" .ns)
-DIRNAME=$(dirname "$NS_FILE")
-
-APP_NAME=$(osascript -e 'text returned of (display dialog "Enter the name for the new .app:" default answer "'"$BASENAME"'" with title "App Name")' 2>/dev/null)
-if [ -z "$APP_NAME" ]; then
-    APP_NAME="$BASENAME"
-fi
-
-DEFAULT_ID="com.user.$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr -d ' ')"
-BUNDLE_ID=$(osascript -e 'text returned of (display dialog "Enter the Bundle Identifier:" default answer "'"$DEFAULT_ID"'" with title "Bundle Identifier")' 2>/dev/null)
-if [ -z "$BUNDLE_ID" ]; then
-    BUNDLE_ID="$DEFAULT_ID"
-fi
-
-TARGET_APP="$DIRNAME/$APP_NAME.app"
 
 mkdir -p "$TARGET_APP/Contents/MacOS"
 mkdir -p "$TARGET_APP/Contents/Resources"
 
+cp "$SCRIPT_PATH" "$TARGET_APP/Contents/Resources/script.ns"
+
 RUNNER_PATH="$TARGET_APP/Contents/MacOS/runner"
-cat << EOF > "$RUNNER_PATH"
+cat << 'EOF' > "$RUNNER_PATH"
 #!/bin/bash
-open -a "$NANO_APP" "$NS_FILE"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_FILE="$DIR/../Resources/script.ns"
+NANO_APP="/Applications/NanoSharp.app"
+
+if [ -d "$NANO_APP" ]; then
+    open -a "$NANO_APP" "$SCRIPT_FILE"
+else
+    echo "Error: NanoSharp not found. Install NanoSharp to run this application." >&2
+    exit 1
+fi
 EOF
 
 chmod +x "$RUNNER_PATH"
@@ -59,5 +66,4 @@ cat << EOF > "$TARGET_APP/Contents/Info.plist"
 </plist>
 EOF
 
-# 9. GUI Success Notification
-osascript -e 'display dialog "Successfully created: '"$APP_NAME"'.app" buttons {"OK"} default button 1 with icon note'
+echo "Successfully created standalone app: $TARGET_APP with Bundle ID: $BUNDLE_ID"
