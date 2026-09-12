@@ -1,28 +1,26 @@
 #!/bin/bash
 set -e
 
-# Usage: ./ns2app.sh <script.ns> [AppName]
+# Usage: ./ns2app.sh <script.ns>
 
 SCRIPT_PATH="$1"
 if [ -z "$SCRIPT_PATH" ] || [ ! -f "$SCRIPT_PATH" ]; then
     echo "Error: Valid .ns script path required." >&2
-    echo "Usage: $0 <script.ns> [AppName]" >&2
+    echo "Usage: $0 <script.ns>" >&2
     exit 1
 fi
 
 BASENAME=$(basename "$SCRIPT_PATH" .ns)
-APP_NAME="${2:-$BASENAME}"
+APP_NAME="$BASENAME"
 
 SAFE_USER=$(whoami | tr '[:upper:]' '[:lower:]' | tr -d ' ')
 SAFE_APP=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
-DEFAULT_ID="com.$SAFE_USER.$SAFE_APP"
-
-BUNDLE_ID="${3:-$DEFAULT_ID}"
+BUNDLE_ID="com.$SAFE_USER.$SAFE_APP"
 TARGET_APP="$APP_NAME.app"
 
 NANO_APP="/Applications/NanoSharp.app"
 if [ ! -d "$NANO_APP" ]; then
-    echo "Warning: You need to put NanoSharp.app in /Applications." >&2
+    echo "Warning: NanoSharp.app not found in /Applications." >&2
 fi
 
 mkdir -p "$TARGET_APP/Contents/MacOS"
@@ -40,7 +38,7 @@ NANO_APP="/Applications/NanoSharp.app"
 if [ -d "$NANO_APP" ]; then
     open -a "$NANO_APP" "$SCRIPT_FILE"
 else
-    echo "Error: NanoSharp not found. Install NanoSharp to run this application." >&2
+    echo "Error: NanoSharp.app not found." >&2
     exit 1
 fi
 EOF
