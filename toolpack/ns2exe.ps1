@@ -2,7 +2,7 @@
 .SYNOPSIS
     ns2exe - NanoSharp to Executable Compiler (using nanosharp.exe)
 .DESCRIPTION
-    Embeds a NanoSharp .ns script and nanosharp.exe as resources into a single standalone executable.
+    Embeds a NanoSharp .ns script and nanosharp.exe as resources into a single standalone executable. Aborts if nanosharp.exe is missing.
 #>
 
 param(
@@ -16,13 +16,14 @@ if (-not (Test-Path $ScriptPath)) {
     exit 1
 }
 
-if (-not $OutPath) {
-    $OutPath = [System.IO.Path]::ChangeExtension($ScriptPath, ".exe")
-}
-
 $exeSource = Join-Path (Get-Location) "nanosharp.exe"
 if (-not (Test-Path $exeSource)) {
-    Write-Warning "Warning: nanosharp.exe not found in root directory."
+    Write-Error "Error: nanosharp.exe not found in root directory. Compilation aborted."
+    exit 1
+}
+
+if (-not $OutPath) {
+    $OutPath = [System.IO.Path]::ChangeExtension($ScriptPath, ".exe")
 }
 
 $csCode = @"
@@ -86,13 +87,7 @@ if (Test-Path $cscPath) {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $cscPath
     
-    $resourceArgs = ""
-    if (Test-Path $exeSource) {
-        $resourceArgs += " /resource:`"$exeSource`",nanosharp.exe"
-    }
-    if (Test-Path $ScriptPath) {
-        $resourceArgs += " /resource:`"$ScriptPath`",script.ns"
-    }
+    $resourceArgs = " /resource:`"$exeSource`",nanosharp.exe /resource:`"$ScriptPath`",script.ns"
 
     $psi.Arguments = "/target:exe /out:`"$OutPath`"$resourceArgs `"$tempCs`""
     $psi.CreateNoWindow = $true
