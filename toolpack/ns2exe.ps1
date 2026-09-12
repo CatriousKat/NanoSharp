@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-    ns2exe - NanoSharp to Executable Compiler
+    ns2exe - NanoSharp to Executable Compiler (using nanosharp.exe)
 .DESCRIPTION
-    Compiles NanoSharp scripts into Windows PE executables.
+    Embeds a NanoSharp .ns script and nanosharp.exe as resources into a single standalone executable.
 #>
 
 param(
@@ -20,49 +20,55 @@ if (-not $OutPath) {
     $OutPath = [System.IO.Path]::ChangeExtension($ScriptPath, ".exe")
 }
 
-$dllSource = Join-Path (Get-Location) "nanosharp.dll"
-if (-not (Test-Path $dllSource)) {
-    Write-Warning "Warning: nanosharp.dll not found in root directory."
+$exeSource = Join-Path (Get-Location) "nanosharp.exe"
+if (-not (Test-Path $exeSource)) {
+    Write-Warning "Warning: nanosharp.exe not found in root directory."
 }
-
-$scriptContent = [System.IO.File]::ReadAllText($ScriptPath)
-$escapedScript = $scriptContent.Replace('"', '""')
 
 $csCode = @"
 using System;
-using System.Runtime.InteropServices;
 using System.IO;
 using System.Reflection;
+using System.Diagnostics;
 
 class Program {
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    private static extern IntPtr LoadLibrary(string lpFileName);
-
-    [DllImport("nanosharp.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-    public static extern void RunNanoSharpCode(string code);
-
     static void Main(string[] args) {
         try {
-            string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nanosharp.dll");
-            if (!File.Exists(dllPath)) {
-                using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("nanosharp.dll")) {
-                    if (s != null) {
-                        using (FileStream fs = new FileStream(dllPath, FileMode.Create, FileAccess.Write)) {
-                            s.CopyTo(fs);
-                        }
+            string tempDir = Path.Combine(Path.GetTempPath(), "NanoSharpRuntime_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            string exePath = Path.Combine(tempDir, "nanosharp.exe");
+            string scriptPath = Path.Combine(tempDir, "script.ns");
+
+            using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("nanosharp.exe")) {
+                if (s != null) {
+                    using (FileStream fs = new FileStream(exePath, FileMode.Create, FileAccess.Write)) {
+                        s.CopyTo(fs);
                     }
                 }
             }
-            LoadLibrary(dllPath);
-        } catch (Exception) { }
 
-        string embeddedScript = 
-@"$escapedScript";
+            using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("script.ns")) {
+                if (s != null) {
+                    using (FileStream fs = new FileStream(scriptPath, FileMode.Create, FileAccess.Write)) {
+                        s.CopyTo(fs);
+                    }
+                }
+            }
 
-        try {
-            RunNanoSharpCode(embeddedScript);
+            ProcessStartInfo psi = new ProcessStartInfo();
+            psi.FileName = exePath;
+            psi.Arguments = "\"" + scriptPath + "\"";
+            psi.UseShellExecute = false;
+
+            Process p = Process.Start(psi);
+            p.WaitForExit();
+
+            try { Directory.Delete(tempDir, true); } catch { }
+
+            Environment.Exit(p.ExitCode);
         } catch (Exception ex) {
-            System.Windows.Forms.MessageBox.Show("Error executing script: " + ex.Message, "NanoSharp Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            Console.WriteLine("Error executing NanoSharp wrapper: " + ex.Message);
         }
     }
 }
@@ -80,19 +86,22 @@ if (Test-Path $cscPath) {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $cscPath
     
-    $resourceArg = ""
-    if (Test-Path $dllSource) {
-        $resourceArg = "/resource:`"$dllSource`",nanosharp.dll"
+    $resourceArgs = ""
+    if (Test-Path $exeSource) {
+        $resourceArgs += " /resource:`"$exeSource`",nanosharp.exe"
+    }
+    if (Test-Path $ScriptPath) {
+        $resourceArgs += " /resource:`"$ScriptPath`",script.ns"
     }
 
-    $psi.Arguments = "/target:exe /out:`"$OutPath`" $resourceArg `"$tempCs`""
+    $psi.Arguments = "/target:exe /out:`"$OutPath`"$resourceArgs `"$tempCs`""
     $psi.CreateNoWindow = $true
     $psi.UseShellExecute = false
     $p = [System.Diagnostics.Process]::Start($psi)
     $p.WaitForExit()
     
     Remove-Item $tempCs -ErrorAction SilentlyContinue
-    Write-Host "Successfully compiled executable to $OutPath" -ForegroundColor Green
+    Write-Host "Successfully compiled standalone executable to $OutPath" -ForegroundColor Green
 } else {
     Write-Error "C# compiler (csc.exe) not found on this system."
     exit 1
