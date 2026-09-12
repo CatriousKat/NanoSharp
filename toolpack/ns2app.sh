@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
 
-# Usage: ./ns2app.sh <script.ns> [AppName] [BundleID]
+# Usage: ./ns2app.sh <script.ns> [AppName]
 
 SCRIPT_PATH="$1"
 if [ -z "$SCRIPT_PATH" ] || [ ! -f "$SCRIPT_PATH" ]; then
     echo "Error: Valid .ns script path required." >&2
-    echo "Usage: $0 <script.ns> [AppName] [BundleID]" >&2
+    echo "Usage: $0 <script.ns> [AppName]" >&2
     exit 1
 fi
 
